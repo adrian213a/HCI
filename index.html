@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>USM Attendance System - Green & Yellow Theme</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    :root {
+      --usm-green: #006400;
+      --usm-yellow: #FFDD00;
+      --usm-dark-green: #004d00;
+      --usm-light-yellow: #fffbe6;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://upload.wikimedia.org/wikipedia/commons/9/9e/USM_Arch_Cotabato.jpg') no-repeat center center fixed;
+      background-size: cover;
+      position: relative;
+      min-height: 100vh;
+      color: var(--usm-green);
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 77, 0, 0.75);
+      z-index: -1;
+    }
+    .container {
+      max-width: 400px;
+      background-color: #fff;
+      margin: 3rem auto;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      color: var(--usm-green);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .logo img {
+      width: 120px;
+      display: block;
+      margin: 0 auto 1rem;
+    }
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    input, select {
+      padding: 14px;
+      border: 2px solid var(--usm-green);
+      border-radius: 10px;
+      font-size: 1.1rem;
+      outline-offset: 2px;
+      transition: border-color 0.3s ease;
+    }
+    input:focus, select:focus {
+      border-color: var(--usm-yellow);
+      outline: none;
+    }
+    button {
+      background-color: var(--usm-green);
+      color: white;
+      font-weight: 700;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: var(--usm-dark-green);
+    }
+    .small-link {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--usm-green);
+    }
+    .small-link a {
+      color: var(--usm-yellow);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .small-link a:hover {
+      text-decoration: underline;
+    }
+    .nfc-qr-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .nfc-qr-buttons button {
+      width: 100%;
+      font-size: 1.2rem;
+      padding: 1rem;
+      border-radius: 12px;
+      font-weight: 700;
+      background-color: var(--usm-yellow);
+      color: var(--usm-green);
+      border: 2px solid var(--usm-green);
+    }
+    .nfc-qr-buttons button:hover {
+      background-color: #e6ca00; /* darker yellow */
+    }
+    video, canvas {
+      display: none;
+    }
+    #new-student-modal {
+      background: var(--usm-light-yellow);
+      color: var(--usm-green);
+      padding: 2rem;
+      border-radius: 15px;
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      z-index: 999;
+    }
+    #student-list {
+      list-style: none;
+      padding-left: 0;
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+    #student-list li {
+      background: #fff7cc;
+      color: var(--usm-green);
+      padding: 12px 15px;
+      margin: 5px 0;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src=""usm_logo_1954.png"" alt=>
+      <h3>University of Southern Mindanao</h3>
+    </div>
+
+    <div id="auth-section">
+      <form id="login-form">
+        <input type="text" id="login-username" placeholder="Email Address" required />
+        <input type="password" id="login-password" placeholder="Password" required />
+        <button type="submit">SIGN IN</button>
+      </form>
+
+      <form id="register-form" style="display:none;">
+        <input type="text" id="register-username" placeholder="Email Address" required />
+        <input type="password" id="register-password" placeholder="Password" required />
+        <button type="submit">REGISTER</button>
+      </form>
+
+      <p class="small-link">
+        Already have an account? <a href="#" id="show-login">Login</a><br />
+        Don’t have an account? <a href="#" id="show-register">Register</a>
+      </p>
+    </div>
+
+    <div id="attendance-section" style="display:none;">
+      <h3>Attendance System</h3>
+      <div id="session-settings">
+        <label for="course">Course:</label>
+        <input type="text" id="course" required />
+        <label for="semester">Semester:</label>
+        <select id="semester">
+          <option value="1st Sem Midterm">1st Sem Midterm</option>
+          <option value="1st Sem Final">1st Sem Final</option>
+          <option value="2nd Sem Midterm">2nd Sem Midterm</option>
+          <option value="2nd Sem Final">2nd Sem Final</option>
+        </select>
+        <label for="class-time">Class Time:</label>
+        <input type="time" id="class-time" required />
+        <button id="start-session-btn">Start Session</button>
+      </div>
+
+      <div id="attendance-capture" style="display:none;">
+        <h3>Select NFC or Scan QR</h3>
+        <div class="nfc-qr-buttons">
+          <button id="scan-nfc-btn">📶 NFC</button>
+          <button id="scan-qr-btn">🔍 QR</button>
+        </div>
+        <video id="qr-video" playsinline></video>
+        <canvas id="qr-canvas"></canvas>
+      </div>
+
+      <div id="attendance-display" style="display:none;">
+        <h3>Attendance List</h3>
+        <ul id="student-list"></ul>
+        <button id="export-excel-btn">Export to Excel</button>
+      </div>
+
+      <button id="logout-btn">Logout</button>
+    </div>
+
+    <div id="new-student-modal" style="display:none;">
+      <h3>New Student Info</h3>
+      <form id="new-student-form">
+        <input type="hidden" id="student-id" />
+        <input type="text" id="student-name" placeholder="Name" required />
+        <input type="text" id="student-program" placeholder="Program" required />
+        <button type="submit">Save</button>
+        <button type="button" id="cancel-student-btn">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const showLoginLink = document.getElementById('show-login');
+      const showRegisterLink = document.getElementById('show-register');
+      const authSection = document.getElementById('auth-section');
+      const attendanceSection = document.getElementById('attendance-section');
+      const sessionSettings = document.getElementById('session-settings');
+      const attendanceCapture = document.getElementById('attendance-capture');
+      const attendanceDisplay = document.getElementById('attendance-display');
+      const logoutBtn = document.getElementById('logout-btn');
+      const startSessionBtn = document.getElementById('start-session-btn');
+      const scanQrBtn = document.getElementById('scan-qr-btn');
+      const scanNfcBtn = document.getElementById('scan-nfc-btn');
+      const exportExcelBtn = document.getElementById('export-excel-btn');
+      const newStudentModal = document.getElementById('new-student-modal');
+      const newStudentForm = document.getElementById('new-student-form');
+      const cancelStudentBtn = document.getElementById('cancel-student-btn');
+      const qrVideo = document.getElementById('qr-video');
+      const qrCanvas = document.getElementById('qr-canvas');
+      const qrCanvasContext = qrCanvas.getContext('2d');
+      const studentIdInput = document.getElementById('student-id');
+      const studentList = document.getElementById('student-list');
+
+      let loggedInUser = localStorage.getItem('loggedInUser');
+      let currentCourse = null;
+      let currentSemester = null;
+      let classStartTime = null;
+      let attendanceData = [];
+      let qrScanningActive = false;
+
+      if (loggedInUser) showAttendanceSection();
+      else showAuthSection();
+
+      function showAttendanceSection() {
+        authSection.style.display = 'none';
+        attendanceSection.style.display = 'block';
+        sessionSettings.style.display = 'block';
+        attendanceCapture.style.display = 'none';
+        attendanceDisplay.style.display = 'none';
+      }
+
+      function showAuthSection() {
+        authSection.style.display = 'block';
+        attendanceSection.style.display = 'none';
+      }
+
+      function showAttendanceCapture() {
+        sessionSettings.style.display = 'none';
+        attendanceCapture.style.display = 'block';
+        attendanceDisplay.style.display = 'block';
+      }
+
+      function getStorageKey() {
+        return `${loggedInUser}_${currentCourse}_${currentSemester}`;
+      }
+
+      function loadAttendanceData() {
+        const data = localStorage.getItem(getStorageKey());
+        return data ? JSON.parse(data) : [];
+      }
+
+      function saveAttendanceData() {
+        localStorage.setItem(getStorageKey(), JSON.stringify(attendanceData));
+      }
+
+      function renderAttendanceList() {
+        studentList.innerHTML = '';
+        if (attendanceData.length === 0) {
+          studentList.innerHTML = '<li>No attendance records yet</li>';
+          return;
+        }
+        attendanceData.forEach(student => {
+          const li = document.createElement('li');
+          li.textContent = `${student.name} (${student.program}) - Present: ${student.present || 0}, Late: ${student.late || 0}`;
+          studentList.appendChild(li);
+        });
+      }
+
+      function updateAttendanceStatus(student) {
+        const now = new Date();
+        const [h, m] = classStartTime.split(':').map(Number);
+        const classTime = new Date();
+        classTime.setHours(h, m, 0, 0);
+        const isLate = (now - classTime) > 15 * 60 * 1000;
+        if (isLate) student.late = (student.late || 0) + 1;
+        else student.present = (student.present || 0) + 1;
+      }
+
+      function processAttendance(studentId) {
+        let student = attendanceData.find(s => s.id === studentId);
+        if (student) {
+          updateAttendanceStatus(student);
+        } else {
+          studentIdInput.value = studentId;
+          newStudentModal.style.display = 'block';
+          return;
+        }
+        saveAttendanceData();
+        renderAttendanceList();
+      }
+
+      function startQrScanning() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+          .then(stream => {
+            qrVideo.srcObject = stream;
+            qrVideo.play();
+            qrVideo.style.display = 'block';
+            qrScanningActive = true;
+            requestAnimationFrame(scanQRCode);
+          })
+          .catch(err => alert('Camera error: ' + err.message));
+      }
+
+      function scanQRCode() {
+        if (!qrScanningActive || qrVideo.videoWidth === 0) {
+          requestAnimationFrame(scanQRCode);
+          return;
+        }
+        qrCanvas.width = qrVideo.videoWidth;
+        qrCanvas.height = qrVideo.videoHeight;
+        qrCanvasContext.drawImage(qrVideo, 0, 0);
+        const imageData = qrCanvasContext.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          stopQrScanning();
+          processAttendance(code.data);
+        } else {
+          requestAnimationFrame(scanQRCode);
+        }
+      }
+
+      function stopQrScanning() {
+        if (qrVideo.srcObject) {
+          qrVideo.srcObject.getTracks().forEach(track => track.stop());
+          qrVideo.srcObject = null;
+        }
+        qrVideo.style.display = 'none';
+        qrScanningActive = false;
+      }
+
+      async function startNfcScanning() {
+        if ('NDEFReader' in window) {
+          try {
+            const nfcReader = new NDEFReader();
+            await nfcReader.scan();
+            alert('Hold your device near an NFC tag.');
+            nfcReader.addEventListener('readingerror', () => {
+              alert('Error reading NFC tag.');
+            });
+            nfcReader.addEventListener('reading', event => {
+              const decoder = new TextDecoder();
+              for (const record of event.message.records) {
+                if (record.recordType === 'text') {
+                  const studentId = decoder.decode(record.data);
+                  processAttendance(studentId);
+                  return;
+                }
+              }
+              alert('No readable student ID found on NFC tag.');
+            });
+          } catch (err) {
+            console.error('NFC error:', err);
+            alert('NFC error: ' + err.message);
+          }
+        } else {
+          alert('Web NFC is not supported on this browser.');
+        }
+      }
+
+      loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const u = document.getElementById('login-username').value;
+        const p = document.getElementById('login-password').value;
+        const stored = localStorage.getItem('user_' + u);
+        if (!stored) return alert('User not found');
+        const parsed = JSON.parse(stored);
+        if (p === parsed.password) {
+          loggedInUser = u;
+          localStorage.setItem('loggedInUser', u);
+          showAttendanceSection();
+        } else alert('Incorrect password');
+      });
+
+      registerForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const u = document.getElementById('register-username').value;
+        const p = document.getElementById('register-password').value;
+        if (localStorage.getItem('user_' + u)) return alert('Username already taken');
+        localStorage.setItem('user_' + u, JSON.stringify({ password: p }));
+        alert('Registration successful! Please log in.');
+        registerForm.style.display = 'none';
+        loginForm.style.display = 'flex';
+      });
+
+      showLoginLink.addEventListener('click', e => {
+        e.preventDefault();
+        loginForm.style.display = 'flex';
+        registerForm.style.display = 'none';
+      });
+
+      showRegisterLink.addEventListener('click', e => {
+        e.preventDefault();
+        registerForm.style.display = 'flex';
+        loginForm.style.display = 'none';
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('loggedInUser');
+        location.reload();
+      });
+
+      startSessionBtn.addEventListener('click', () => {
+        currentCourse = document.getElementById('course').value;
+        currentSemester = document.getElementById('semester').value;
+        classStartTime = document.getElementById('class-time').value;
+        if (currentCourse && currentSemester && classStartTime) {
+          attendanceData = loadAttendanceData();
+          renderAttendanceList();
+          showAttendanceCapture();
+        } else {
+          alert('Complete all session fields.');
+        }
+      });
+
+      scanQrBtn.addEventListener('click', startQrScanning);
+      scanNfcBtn.addEventListener('click', startNfcScanning);
+
+      newStudentForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const id = studentIdInput.value;
+        const name = document.getElementById('student-name').value;
+        const program = document.getElementById('student-program').value;
+        const newStudent = { id, name, program, present: 0, late: 0 };
+        updateAttendanceStatus(newStudent);
+        attendanceData.push(newStudent);
+        saveAttendanceData();
+        renderAttendanceList();
+        newStudentModal.style.display = 'none';
+      });
+
+      cancelStudentBtn.addEventListener('click', () => {
+        newStudentModal.style.display = 'none';
+      });
+
+      exportExcelBtn.addEventListener('click', () => {
+        if (!attendanceData.length) return alert('No data to export');
+        let csv = 'Name,Program,Present,Late\\n';
+        attendanceData.forEach(s => {
+          csv += `${s.name},${s.program},${s.present || 0},${s.late || 0}\\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'attendance.csv';
+        link.click();
+      });
+    });
+  </script>
+</body>
+</html>
